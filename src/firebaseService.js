@@ -83,6 +83,9 @@ export const getPassengerByIdentificationNo = async (identificationNo) => {
   return data;
 };
 
+const storage = getFirestore(app);
+
+export { storage };
 // ✅ Function to save passenger details
 export const savePassengerDetails = async (passengerData) => {
   try {

@@ -1,9 +1,17 @@
-import logo from "./logo.svg";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import "./App.css";
-import PassengerFormApp from "./Passengers";
+import PassengerDetails from "./PassengersForm";
+import ViewPassenger from "./ViewPassenger";
 
 function App() {
-  return <div className="App">Hiiii</div>;
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<PassengerDetails />} />
+        <Route path="/view" element={<ViewPassenger />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;

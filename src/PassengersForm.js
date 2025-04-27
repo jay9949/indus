@@ -169,6 +169,19 @@ const PassengerDetails = () => {
                       onChange={(e) => handleChange(index, e)}
                       className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
+                  ) : key === "baggageWeight" ? (
+                    // This is the updated baggage weight input with "kg"
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        name="baggageWeight"
+                        value={value}
+                        onChange={(e) => handleChange(index, e)}
+                        className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        placeholder="Enter Baggage Weight"
+                      />
+                      <span className="ml-2 text-gray-600">kg</span>
+                    </div>
                   ) : (
                     <input
                       type="text"

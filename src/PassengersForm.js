@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import Barcode from "react-barcode";
+import React, { useState, useRef } from "react";
+import QRCode from "react-qr-code";
+import { toPng } from "html-to-image"; // ✅ Import for downloading QR
 import { savePassengerDetails } from "./firebaseService";
 import img from "../src/img/logo.jpeg";
 
@@ -23,13 +24,13 @@ const PassengerDetails = () => {
   ]);
 
   const [errorMessage, setErrorMessage] = useState("");
-  const [barcodeGenerated, setBarcodeGenerated] = useState([]); // Changed to array
+  const [barcodeGenerated, setBarcodeGenerated] = useState([]);
+  const qrCodeRefs = useRef([]);
 
-  // Smart base URL detection
   const baseUrl =
     window.location.hostname === "localhost"
       ? "http://localhost:3000"
-      : "https://your-vercel-domain.vercel.app"; // <-- CHANGE this to your Vercel deployed domain
+      : "https://bharat-airline.vercel.app"; // ✅ Your Vercel domain
 
   const handleChange = (index, e) => {
     const updatedPassengers = [...passengers];
@@ -71,6 +72,12 @@ const PassengerDetails = () => {
         baggageImages: [],
       },
     ]);
+  };
+
+  const removePassenger = (index) => {
+    const updatedPassengers = passengers.filter((_, i) => i !== index);
+    setPassengers(updatedPassengers);
+    setBarcodeGenerated((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validateForm = (index) => {
@@ -120,6 +127,21 @@ const PassengerDetails = () => {
       }
     } catch (error) {
       console.error("Error saving data to Firebase: ", error);
+    }
+  };
+
+  const handleDownloadQRCode = async (index) => {
+    const qrCodeElement = qrCodeRefs.current[index];
+    if (!qrCodeElement) return;
+
+    try {
+      const dataUrl = await toPng(qrCodeElement);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `Passenger_${index + 1}_QRCode.png`;
+      link.click();
+    } catch (error) {
+      console.error("Failed to download QR code", error);
     }
   };
 
@@ -206,28 +228,44 @@ const PassengerDetails = () => {
                 )}
               </div>
 
-              {/* Barcode Display */}
               {barcodeGenerated.includes(
                 passenger.formData.identificationNo
               ) && (
                 <div className="mt-6 flex flex-col items-center">
-                  <Barcode
-                    value={`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
-                    displayValue={false}
-                    width={1.5}
-                    height={100}
-                    marginTop={0}
-                    marginBottom={0}
-                  />
+                  <div
+                    ref={(el) => (qrCodeRefs.current[index] = el)}
+                    className="bg-white p-4 rounded"
+                  >
+                    <QRCode
+                      value={`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
+                      size={220}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => handleDownloadQRCode(index)}
+                    type="button"
+                    className="mt-4 bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition"
+                  >
+                    Download QR Code
+                  </button>
                 </div>
               )}
 
               <button
                 type="button"
                 onClick={() => saveAndGenerateBarcode(index)}
-                className="bg-green-500 text-white py-1 px-2 rounded text-sm hover:bg-green-600 transition"
+                className="bg-green-500 text-white py-1 px-2 rounded text-sm hover:bg-green-600 transition mt-4"
               >
-                Save & Generate Barcode
+                Save & Generate QR Code
+              </button>
+
+              <button
+                type="button"
+                onClick={() => removePassenger(index)}
+                className="bg-red-500 text-white py-1 px-2 rounded text-sm hover:bg-red-600 transition mt-2"
+              >
+                Remove Passenger
               </button>
             </form>
           </div>

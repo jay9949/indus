@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getPassengerByIdentificationNo } from "./firebaseService";
+import {
+  getPassengerByIdentificationNo,
+  updatePassengerPersonImage,
+} from "./firebaseService"; // <-- Firebase service functions
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "./firebaseService"; // Your firebaseConfig file
+import { storage } from "./firebaseService"; // Firebase config
 
 const ViewPassenger = () => {
   const [searchParams] = useSearchParams();
@@ -40,6 +43,13 @@ const ViewPassenger = () => {
       const snapshot = await uploadBytes(imageRef, imageFile);
       const downloadURL = await getDownloadURL(snapshot.ref());
       setImageUrl(downloadURL);
+
+      // Save uploaded image URL into the passenger database
+      await updatePassengerPersonImage(barcode, downloadURL);
+
+      // Refresh passenger data to show the new image
+      const updatedData = await getPassengerByIdentificationNo(barcode);
+      setPassengerData(updatedData);
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -61,71 +71,19 @@ const ViewPassenger = () => {
         </h1>
 
         <div className="flex flex-col gap-4">
-          {/* Displaying the fields line by line */}
-          <div className="flex flex-col">
-            <span className="text-gray-600">Name</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.name}
-            </span>
-          </div>
+          {/* Display all passenger fields except images */}
+          {Object.entries(passengerData)
+            .filter(([key]) => key !== "personImage" && key !== "baggageImages")
+            .map(([key, value]) => (
+              <div key={key} className="flex flex-col">
+                <span className="text-gray-600 capitalize">
+                  {key.replace(/([A-Z])/g, " $1")}
+                </span>
+                <span className="text-gray-800 font-semibold">{value}</span>
+              </div>
+            ))}
 
-          <div className="flex flex-col">
-            <span className="text-gray-600">Flight No</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.flightNo}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">PNR</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.pnr}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">Seat No</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.seatNo}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">No of Baggage</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.noOfBaggage}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">Baggage Weight</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.baggageWeight}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">Arrival Time</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.arrivalTime}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">Departure Time</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.departureTime}
-            </span>
-          </div>
-
-          <div className="flex flex-col">
-            <span className="text-gray-600">Identification No</span>
-            <span className="text-gray-800 font-semibold">
-              {passengerData.identificationNo}
-            </span>
-          </div>
-
-          {/* Person Image */}
+          {/* Person Image Section */}
           <div className="flex flex-col mt-4">
             <span className="text-gray-600">Person Image</span>
             {passengerData.personImage ? (
@@ -133,9 +91,10 @@ const ViewPassenger = () => {
                 src={passengerData.personImage}
                 alt="Person"
                 className="w-full h-auto max-w-md object-cover mt-2 rounded"
-                onError={() =>
-                  console.error("Image not found:", passengerData.personImage)
-                }
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/default-avatar.png"; // fallback image
+                }}
               />
             ) : (
               <p className="text-sm text-gray-500">
@@ -144,25 +103,29 @@ const ViewPassenger = () => {
             )}
           </div>
 
-          {/* Baggage Images */}
+          {/* Baggage Images Section */}
           <div className="flex flex-col mt-4">
             <span className="text-gray-600">Baggage Images</span>
             <div className="flex flex-wrap gap-4 mt-2">
-              {passengerData.baggageImages?.map((imgUrl, idx) => (
-                <img
-                  key={idx}
-                  src={imgUrl}
-                  alt={`Baggage ${idx + 1}`}
-                  className="w-32 h-32 object-cover rounded"
-                  onError={() => console.error("Image not found:", imgUrl)}
-                />
-              ))}
+              {passengerData.baggageImages?.length > 0 ? (
+                passengerData.baggageImages.map((imgUrl, idx) => (
+                  <img
+                    key={idx}
+                    src={imgUrl}
+                    alt={`Baggage ${idx + 1}`}
+                    className="w-32 h-32 object-cover rounded"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/default-baggage.png";
+                    }}
+                  />
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No baggage images available
+                </p>
+              )}
             </div>
-            {passengerData.baggageImages?.length === 0 && (
-              <p className="text-sm text-gray-500">
-                No baggage images available
-              </p>
-            )}
           </div>
         </div>
       </div>

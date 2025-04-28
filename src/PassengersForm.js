@@ -255,6 +255,16 @@ const PassengerDetails = () => {
                     />
                   </div>
 
+                  {/* 👇 NEW: Show clickable URL below QR */}
+                  <a
+                    href={`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 text-blue-500 underline break-all text-center"
+                  >
+                    {`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
+                  </a>
+
                   <button
                     onClick={() => handleDownloadQRCode(index)}
                     type="button"

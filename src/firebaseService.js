@@ -44,6 +44,7 @@
 // firebaseService.js
 
 import { initializeApp } from "firebase/app";
+import { doc, updateDoc } from "firebase/firestore";
 import {
   getFirestore,
   collection,
@@ -81,6 +82,18 @@ export const getPassengerByIdentificationNo = async (identificationNo) => {
 
   const data = querySnapshot.docs[0].data();
   return data;
+};
+
+export const updatePassengerPersonImage = async (barcode, imageUrl) => {
+  try {
+    const passengerRef = doc(db, "passengers", barcode); // Assuming 'passengers' collection
+    await updateDoc(passengerRef, {
+      personImage: imageUrl,
+    });
+    console.log("Passenger image updated successfully");
+  } catch (error) {
+    console.error("Error updating passenger image:", error);
+  }
 };
 
 const storage = getFirestore(app);

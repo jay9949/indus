@@ -13,7 +13,7 @@ const ViewPassenger = () => {
   const [passengerData, setPassengerData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const barcode = searchParams.get("barcode");
 
@@ -33,8 +33,22 @@ const ViewPassenger = () => {
     fetchData();
   }, [barcode]);
 
+  useEffect(() => {
+    // Clean up blob preview when component unmounts or file changes
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const handleFileChange = (e) => {
-    setImageFile(e.target.files[0]);
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImageFile(file);
+    const localPreviewUrl = URL.createObjectURL(file);
+    setPreviewUrl(localPreviewUrl);
   };
 
   const handleImageUpload = async () => {
@@ -44,7 +58,6 @@ const ViewPassenger = () => {
     }
 
     try {
-      // Optional: Validate file type
       const validTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!validTypes.includes(imageFile.type)) {
         console.error("Unsupported file type");
@@ -58,14 +71,13 @@ const ViewPassenger = () => {
       const snapshot = await uploadBytes(imageRef, imageFile);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
-      console.log("Image uploaded. Download URL:", downloadURL);
-
       await updatePassengerPersonImage(barcode, downloadURL);
-      console.log("Passenger image updated in database.");
-
       const updatedData = await getPassengerByIdentificationNo(barcode);
       setPassengerData(updatedData);
-      setImageUrl(downloadURL);
+
+      // Clear preview after upload
+      setPreviewUrl(null);
+      setImageFile(null);
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -117,7 +129,7 @@ const ViewPassenger = () => {
               <img
                 src={passengerData.personImage}
                 alt="Person"
-                className="w-[8rem] h-auto max-w-md object-cover mt-2 rounded"
+                className="w-[8rem] h-auto object-cover mt-2 rounded"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "/default-avatar.png";
@@ -127,6 +139,18 @@ const ViewPassenger = () => {
               <p className="text-sm text-gray-500">
                 Person image not available
               </p>
+            )}
+
+            {/* Preview */}
+            {previewUrl && (
+              <div className="mt-2">
+                <span className="text-gray-600">Preview:</span>
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-[8rem] h-auto object-cover mt-2 rounded border"
+                />
+              </div>
             )}
 
             <div className="flex flex-col mt-2 gap-2">

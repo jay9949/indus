@@ -6,6 +6,7 @@ import {
 } from "./firebaseService";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "./firebaseService";
+import { v4 as uuidv4 } from "uuid";
 
 const ViewPassenger = () => {
   const [searchParams] = useSearchParams();
@@ -37,17 +38,34 @@ const ViewPassenger = () => {
   };
 
   const handleImageUpload = async () => {
-    if (!imageFile) return;
-    const imageRef = ref(storage, `images/${imageFile.name}`);
+    if (!imageFile) {
+      console.error("No image file selected");
+      return;
+    }
+
     try {
+      // Optional: Validate file type
+      const validTypes = ["image/jpeg", "image/png", "image/webp"];
+      if (!validTypes.includes(imageFile.type)) {
+        console.error("Unsupported file type");
+        return;
+      }
+
+      const fileExtension = imageFile.name.split(".").pop();
+      const uniqueFileName = `image_${uuidv4()}.${fileExtension}`;
+      const imageRef = ref(storage, `images/${uniqueFileName}`);
+
       const snapshot = await uploadBytes(imageRef, imageFile);
-      const downloadURL = await getDownloadURL(snapshot.ref());
-      setImageUrl(downloadURL);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      console.log("Image uploaded. Download URL:", downloadURL);
 
       await updatePassengerPersonImage(barcode, downloadURL);
+      console.log("Passenger image updated in database.");
 
       const updatedData = await getPassengerByIdentificationNo(barcode);
       setPassengerData(updatedData);
+      setImageUrl(downloadURL);
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -81,7 +99,6 @@ const ViewPassenger = () => {
         </h1>
 
         <div className="flex flex-col gap-4">
-          {/* Display selected passenger fields in the desired order */}
           {fieldsOrder.map(({ key, label }) =>
             passengerData[key] ? (
               <div key={key} className="flex flex-col">
@@ -93,7 +110,7 @@ const ViewPassenger = () => {
             ) : null
           )}
 
-          {/* Person Image */}
+          {/* Person Image Section */}
           <div className="flex flex-col mt-4">
             <span className="text-gray-600">Person Image</span>
             {passengerData.personImage ? (
@@ -111,6 +128,16 @@ const ViewPassenger = () => {
                 Person image not available
               </p>
             )}
+
+            <div className="flex flex-col mt-2 gap-2">
+              <input type="file" onChange={handleFileChange} />
+              <button
+                onClick={handleImageUpload}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              >
+                Upload New Image
+              </button>
+            </div>
           </div>
 
           {/* Baggage Images */}

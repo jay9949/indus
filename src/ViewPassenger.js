@@ -36,7 +36,7 @@ const ViewPassenger = () => {
     fetchData();
   }, [barcode]);
 
-  // Clean up blob preview
+  // Clean up blob
   useEffect(() => {
     return () => {
       if (previewUrl) {

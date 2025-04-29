@@ -1,7 +1,8 @@
 import React, { useState, useRef } from "react";
 import QRCode from "react-qr-code";
-import { toPng } from "html-to-image"; // ✅ Import for downloading QR
-import { savePassengerDetails } from "./firebaseService";
+import { toPng } from "html-to-image";
+import { savePassengerDetails, storage } from "./firebaseService";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import img from "../src/img/logo.jpeg";
 
 const PassengerDetails = () => {
@@ -30,7 +31,7 @@ const PassengerDetails = () => {
   const baseUrl =
     window.location.hostname === "localhost"
       ? "http://localhost:3000"
-      : "https://bharat-airline.vercel.app"; // ✅ Your Vercel domain
+      : "https://bharat-airline.vercel.app";
 
   const handleChange = (index, e) => {
     const updatedPassengers = [...passengers];
@@ -38,19 +39,28 @@ const PassengerDetails = () => {
     setPassengers(updatedPassengers);
   };
 
-  const handleImageChange = (index, e, type, baggageIndex = null) => {
+  const handleImageChange = async (index, e, type, baggageIndex = null) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
     const updatedPassengers = [...passengers];
-    if (type === "person") {
-      updatedPassengers[index].personImage = URL.createObjectURL(
-        e.target.files[0]
-      );
-    } else {
-      if (baggageIndex !== null) {
-        updatedPassengers[index].baggageImages[baggageIndex] =
-          URL.createObjectURL(e.target.files[0]);
+    const filePath = `images/${Date.now()}_${file.name}`;
+    const imageRef = ref(storage, filePath);
+
+    try {
+      await uploadBytes(imageRef, file);
+      const downloadURL = await getDownloadURL(imageRef);
+
+      if (type === "person") {
+        updatedPassengers[index].personImage = downloadURL;
+      } else if (type === "baggage" && baggageIndex !== null) {
+        updatedPassengers[index].baggageImages[baggageIndex] = downloadURL;
       }
+
+      setPassengers(updatedPassengers);
+    } catch (error) {
+      console.error("Error uploading image:", error);
     }
-    setPassengers(updatedPassengers);
   };
 
   const addPassenger = () => {
@@ -105,9 +115,7 @@ const PassengerDetails = () => {
   };
 
   const saveAndGenerateBarcode = async (index) => {
-    if (!validateForm(index)) {
-      return;
-    }
+    if (!validateForm(index)) return;
 
     const passenger = passengers[index];
 
@@ -170,7 +178,6 @@ const PassengerDetails = () => {
                       className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   ) : key === "baggageWeight" ? (
-                    // This is the updated baggage weight input with "kg"
                     <div className="flex items-center">
                       <input
                         type="text"
@@ -254,8 +261,6 @@ const PassengerDetails = () => {
                       size={220}
                     />
                   </div>
-
-                  {/* 👇 NEW: Show clickable URL below QR */}
                   <a
                     href={`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
                     target="_blank"

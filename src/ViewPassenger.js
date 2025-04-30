@@ -1,18 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  getPassengerByIdentificationNo,
-  updatePassengerPersonImage,
-} from "./firebaseService"; // Firebase service functions
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "./firebaseService"; // Firebase config
+import { getPassengerByIdentificationNo } from "./firebaseService";
 
 const ViewPassenger = () => {
   const [searchParams] = useSearchParams();
   const [passengerData, setPassengerData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState(null);
 
   const barcode = searchParams.get("barcode");
 
@@ -35,6 +28,9 @@ const ViewPassenger = () => {
       if (!barcode) return;
       try {
         const data = await getPassengerByIdentificationNo(barcode);
+        console.log("Passenger Data:", data);
+        console.log("Person Image URL:", data.personImage);
+        console.log("Baggage Images URLs:", data.baggageImages);
         setPassengerData(data);
       } catch (error) {
         console.error("Error fetching passenger:", error);
@@ -45,29 +41,6 @@ const ViewPassenger = () => {
 
     fetchData();
   }, [barcode]);
-
-  const handleFileChange = (e) => {
-    setImageFile(e.target.files[0]);
-  };
-
-  const handleImageUpload = async () => {
-    if (!imageFile) return;
-    const imageRef = ref(storage, `images/${imageFile.name}`);
-    try {
-      const snapshot = await uploadBytes(imageRef, imageFile);
-      const downloadURL = await getDownloadURL(snapshot.ref());
-      setImageUrl(downloadURL);
-
-      // Save uploaded image URL into the passenger database
-      await updatePassengerPersonImage(barcode, downloadURL);
-
-      // Refresh passenger data to show the new image
-      const updatedData = await getPassengerByIdentificationNo(barcode);
-      setPassengerData(updatedData);
-    } catch (error) {
-      console.error("Error uploading image:", error);
-    }
-  };
 
   if (loading) return <div className="text-center mt-10">Loading...</div>;
 
@@ -85,7 +58,6 @@ const ViewPassenger = () => {
         </h1>
 
         <div className="flex flex-col gap-4">
-          {/* Display Form Fields in Order */}
           {formFieldOrder.map(({ key, label }) => (
             <div key={key} className="flex flex-col">
               <span className="text-gray-600">{label}</span>
@@ -95,7 +67,6 @@ const ViewPassenger = () => {
             </div>
           ))}
 
-          {/* Person Image Section */}
           <div className="flex flex-col mt-4">
             <span className="text-gray-600">Person Image</span>
             {passengerData.personImage ? (
@@ -105,7 +76,7 @@ const ViewPassenger = () => {
                 className="w-[8rem] h-auto max-w-md object-cover mt-2 rounded"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = "/default-avatar.png"; // fallback image
+                  e.target.src = "/default-avatar.png"; // Ensure in public/
                 }}
               />
             ) : (
@@ -115,7 +86,6 @@ const ViewPassenger = () => {
             )}
           </div>
 
-          {/* Baggage Images Section */}
           <div className="flex flex-col mt-4">
             <span className="text-gray-600">Baggage Images</span>
             <div className="flex flex-wrap gap-4 mt-2">
@@ -128,7 +98,7 @@ const ViewPassenger = () => {
                     className="w-32 h-32 object-cover rounded"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/default-baggage.png";
+                      e.target.src = "/default-baggage.png"; // Ensure in public/
                     }}
                   />
                 ))

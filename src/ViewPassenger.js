@@ -23,6 +23,33 @@ const ViewPassenger = () => {
     { key: "identificationNo", label: "Identification No" },
   ];
 
+
+function ImageFetcher() {
+  const [imageSrc, setImageSrc] = useState(null);
+
+  useEffect(() => {
+    fetch('https://example.com/protected-image.jpg')
+      .then(response => response.blob())
+      .then(blob => {
+        const imgUrl = URL.createObjectURL(blob);
+        setImageSrc(imgUrl);
+      })
+      .catch(error => console.error('Error fetching image:', error));
+  }, []);
+
+  return (
+    <div>
+      {imageSrc ? (
+        <img src={imageSrc} alt="Fetched" />
+      ) : (
+        <p>Loading image...</p>
+      )}
+    </div>
+  );
+}
+
+export default ImageFetcher;
+  
   useEffect(() => {
     const fetchData = async () => {
       if (!barcode) return;

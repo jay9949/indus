@@ -29,8 +29,6 @@ const ViewPassenger = () => {
       try {
         const data = await getPassengerByIdentificationNo(barcode);
         console.log("Passenger Data:", data);
-        console.log("Person Image URL:", data.personImage);
-        console.log("Baggage Images URLs:", data.baggageImages);
         setPassengerData(data);
       } catch (error) {
         console.error("Error fetching passenger:", error);
@@ -76,7 +74,7 @@ const ViewPassenger = () => {
                 className="w-[8rem] h-auto max-w-md object-cover mt-2 rounded"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = "/default-avatar.png"; // Ensure in public/
+                  e.target.src = "/default-avatar.png";
                 }}
               />
             ) : (
@@ -98,7 +96,7 @@ const ViewPassenger = () => {
                     className="w-32 h-32 object-cover rounded"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/default-baggage.png"; // Ensure in public/
+                      e.target.src = "/default-baggage.png";
                     }}
                   />
                 ))

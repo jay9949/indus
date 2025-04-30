@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import QRCode from "react-qr-code";
-import { toPng } from "html-to-image"; // ✅ Import for downloading QR
-import { savePassengerDetails } from "./firebaseService";
+import { toPng } from "html-to-image";
+import { savePassengerToSanity, uploadImageToSanity } from "./sanityService";
 import img from "../src/img/logo.jpeg";
 
 const PassengerDetails = () => {
@@ -32,7 +32,7 @@ const PassengerDetails = () => {
   const baseUrl =
     window.location.hostname === "localhost"
       ? "http://localhost:3000"
-      : "https://bharat-airline.vercel.app"; // ✅ Your Vercel domain
+      : "https://bharat-airline.vercel.app";
 
   const handleChange = (index, e) => {
     const updatedPassengers = [...passengers];
@@ -109,28 +109,43 @@ const PassengerDetails = () => {
   };
 
   const saveAndGenerateBarcode = async (index) => {
-    if (!validateForm(index)) {
-      return;
-    }
+    if (!validateForm(index)) return;
 
     const passenger = passengers[index];
 
     try {
-      await savePassengerDetails({
-        ...passenger.formData,
-        personImage: passenger.personImage,
-        baggageImages: passenger.baggageImages,
-      });
+      const personImageRef = await uploadImageToSanity(passenger.personImage);
+      const baggageImageRefs = await Promise.all(
+        passenger.baggageImages.map((img) => uploadImageToSanity(img))
+      );
 
-      if (passenger.formData.identificationNo) {
-        alert("Passenger data saved successfully!");
-        setBarcodeGenerated((prev) => [
-          ...prev,
-          passenger.formData.identificationNo,
-        ]);
-      }
+      const formattedData = {
+        ...passenger.formData,
+        personImage: {
+          _type: "image",
+          asset: {
+            _type: "reference",
+            _ref: personImageRef,
+          },
+        },
+        baggageImages: baggageImageRefs.map((ref) => ({
+          _type: "image",
+          asset: {
+            _type: "reference",
+            _ref: ref,
+          },
+        })),
+      };
+
+      await savePassengerToSanity(formattedData);
+
+      alert("Passenger data saved to Sanity!");
+      setBarcodeGenerated((prev) => [
+        ...prev,
+        passenger.formData.identificationNo,
+      ]);
     } catch (error) {
-      console.error("Error saving data to Firebase: ", error);
+      console.error("Error saving to Sanity:", error);
     }
   };
 
@@ -174,7 +189,6 @@ const PassengerDetails = () => {
                       className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                   ) : key === "baggageWeight" ? (
-                    // This is the updated baggage weight input with "kg"
                     <div className="flex items-center">
                       <input
                         type="text"
@@ -207,7 +221,7 @@ const PassengerDetails = () => {
                   type="file"
                   accept="image/*"
                   onChange={(e) => handleImageChange(index, e, "person")}
-                  className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="border p-2 rounded"
                 />
                 {passenger.personImage && (
                   <img
@@ -231,7 +245,7 @@ const PassengerDetails = () => {
                         onChange={(e) =>
                           handleImageChange(index, e, "baggage", baggageIndex)
                         }
-                        className="border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="border p-2 rounded"
                       />
                       {passenger.baggageImages[baggageIndex] && (
                         <img
@@ -259,7 +273,6 @@ const PassengerDetails = () => {
                     />
                   </div>
 
-                  {/* 👇 NEW: Show clickable URL below QR */}
                   <a
                     href={`${baseUrl}/view?barcode=${passenger.formData.identificationNo}`}
                     target="_blank"

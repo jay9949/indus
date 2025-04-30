@@ -102,7 +102,7 @@ const ViewPassenger = () => {
               <img
                 src={passengerData.personImage}
                 alt="Person"
-                className="w-[8rem] h-auto max-w-md object-cover mt-2 rounded"
+                className="w-full h-auto max-w-md object-cover mt-2 rounded"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "/default-avatar.png"; // fallback image
